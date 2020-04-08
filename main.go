@@ -27,7 +27,20 @@ func main() {
 	}{}
 
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)
-	err := Call(ctx, &m)
+
+	word := url.QueryEscape(os.Args[1])
+	data, err := Call(ctx, word)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	if len(os.Args) == 3 && os.Args[2] == "-d" {
+		fmt.Println(string(data))
+		return
+	}
+
+	err = json.Unmarshal(data, &m)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -40,7 +53,7 @@ func main() {
 		return
 	}
 
-	if len(os.Args) == 3 {
+	if len(os.Args) == 3 && os.Args[2] == "-d" {
 		fmt.Println(m.Basic.USPhonetic)
 		for _, v := range m.Basic.Explains {
 			fmt.Println(v)
@@ -48,41 +61,35 @@ func main() {
 	}
 }
 
-func Call(ctx context.Context, v interface{}) error {
+func Call(ctx context.Context, word string) (data []byte, err error) {
 	done := make(chan error)
 
 	go func() {
-		err := call(v)
-		done <- err
+		data, err = query(word)
+		close(done)
 	}()
 
 	select {
 	case <-ctx.Done():
-		return errors.New("request time out")
-	case err := <-done:
-		return err
+		return nil, errors.New("request time out")
+	case <-done:
+		return
 	}
 }
 
-func call(v interface{}) error {
+func query(word string) ([]byte, error) {
 	domain := "http://fanyi.youdao.com"
 
 	keyfrom := "easyfanyi"
 	key := "1929637537"
-	q := url.QueryEscape(os.Args[1])
+	q := word
 	myurl := domain + "/openapi.do?keyfrom=" + keyfrom + "&key=" + key + "&type=data&doctype=json&version=1.1&q=" + q
 
 	resp, err := http.Get(myurl)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
-	data, err := ioutil.ReadAll(resp.Body)
-
-	err = json.Unmarshal(data, v)
-	if err != nil {
-		return err
-	}
-	return nil
+	return ioutil.ReadAll(resp.Body)
 }
