@@ -23,25 +23,37 @@ func main() {
 	myurl := domain + "/openapi.do?keyfrom=" + keyfrom + "&key=" + key + "&type=data&doctype=json&version=1.1&q=" + q
 
 	resp, err := http.Get(myurl)
-	defer resp.Body.Close()
 	if err != nil {
-		panic("request error")
+		fmt.Println(err)
+		return
 	}
+	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
-	m := map[string]interface{}{}
-	err = json.Unmarshal(body, &m)
+	data, err := ioutil.ReadAll(resp.Body)
+
+	m := struct {
+		Translation []string `json:"translation"`
+		Basic       struct {
+			USPhonetic string   `json:"us-phonetic"`
+			Explains   []string `json:"explains"`
+		} `json:"basic"`
+	}{}
+	err = json.Unmarshal(data, &m)
 	if err != nil {
 		panic("json unmarshal error")
 	}
 
-	basic := m["basic"].(map[string]interface{})
-	if len(os.Args) == 3 {
-		fmt.Println(basic["us-phonetic"])
+	if len(os.Args) == 2 {
+		for _, v := range m.Translation {
+			fmt.Println(v)
+		}
+		return
 	}
 
-	ex := basic["explains"].([]interface{})
-	for _, v := range ex {
-		fmt.Println(v)
+	if len(os.Args) == 3 {
+		fmt.Println(m.Basic.USPhonetic)
+		for _, v := range m.Basic.Explains {
+			fmt.Println(v)
+		}
 	}
 }
