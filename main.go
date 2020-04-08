@@ -53,7 +53,7 @@ func main() {
 		return
 	}
 
-	if len(os.Args) == 3 && os.Args[2] == "-d" {
+	if len(os.Args) == 3 && os.Args[2] == "-v" {
 		fmt.Println(m.Basic.USPhonetic)
 		for _, v := range m.Basic.Explains {
 			fmt.Println(v)
